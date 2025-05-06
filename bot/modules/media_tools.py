@@ -577,11 +577,8 @@ async def get_media_tools_settings(from_user, stype="main", page_no=0):
 
         # Add action buttons in a separate row
         buttons.data_button(
-            "Default", f"mediatools {user_id} default_watermark_text", "footer"
-        )
-        buttons.data_button(
             "Back",
-            f"mediatools {user_id} back_to_watermark_config {page_no}",
+            f"mediatools {user_id} back",
             "footer",
         )
         buttons.data_button("Close", f"mediatools {user_id} close", "footer")
@@ -5286,30 +5283,8 @@ async def get_menu(option, message, user_id):
         or option.startswith("AUDIO_WATERMARK_")
         or option.startswith("SUBTITLE_WATERMARK_")
     ):
-        # Check if we need to return to a specific page in watermark_config
-        global watermark_config_page
-
-        if message.text and "Page:" in message.text:
-            try:
-                page_info = message.text.split("Page:")[1].strip().split("/")[0]
-                page_no = int(page_info) - 1
-                # Update the global variable
-                watermark_config_page = page_no
-                back_target = f"watermark_config {page_no}"
-            except (ValueError, IndexError) as e:
-                LOGGER.error(
-                    f"Failed to extract page number from message text: {e}, using global watermark_config_page: {watermark_config_page}"
-                )
-                back_target = f"watermark_config {watermark_config_page}"
-        else:
-            # Check if we have a stored page in handler_dict
-            stored_page = handler_dict.get(f"{user_id}_watermark_page")
-            if stored_page is not None:
-                watermark_config_page = stored_page
-                back_target = f"watermark_config {watermark_config_page}"
-            else:
-                # Use the global variable
-                back_target = f"watermark_config {watermark_config_page}"
+        # For watermark settings, always go back to the watermark menu
+        back_target = "watermark"
     elif option.startswith("CONVERT_VIDEO_"):
         back_target = "convert_video"
     elif option.startswith("CONVERT_AUDIO_"):
@@ -6222,8 +6197,25 @@ async def set_option(_, message, option, rfunc):
     update_user_ldata(user_id, option, value)
     await delete_message(message)
 
+    # Check if we're in a watermark text menu with pagination
+    if option.startswith(("WATERMARK_", "AUDIO_WATERMARK_", "SUBTITLE_WATERMARK_")):
+        # Check if we have a stored page number for this user
+        stored_page = handler_dict.get(f"{user_id}_watermark_page")
+        if stored_page is not None:
+            # Update the global watermark_config_page variable
+            global watermark_config_page
+            watermark_config_page = stored_page
+            # Return to the watermark config menu with the correct page
+            await update_media_tools_settings(
+                message, f"watermark_config {stored_page}"
+            )
+        else:
+            # If no stored page, use the global variable
+            await update_media_tools_settings(
+                message, f"watermark_config {watermark_config_page}"
+            )
     # If we're in a merge_config menu with pagination, extract the page number
-    if (
+    elif (
         (
             option.startswith("MERGE_")
             or option in ["CONCAT_DEMUXER_ENABLED", "FILTER_COMPLEX_ENABLED"]
@@ -6432,7 +6424,6 @@ async def edit_media_tools_settings(client, query):
         data[2]
         in [
             "watermark",
-            "watermark_config",
             "merge",
             "convert",
             "compression",
@@ -6465,6 +6456,35 @@ async def edit_media_tools_settings(client, query):
     ):
         await query.answer()
         await update_media_tools_settings(query, data[2])
+    elif data[2] == "watermark_config" or (
+        len(data) > 3 and data[2] == "watermark_config"
+    ):
+        await query.answer()
+        # Declare global variable first
+        global watermark_config_page
+        if len(data) > 3:
+            # Page number is provided
+            try:
+                # Format: watermark_config X
+                page_no = int(data[3])
+                # Update the global variable
+                watermark_config_page = page_no
+                await update_media_tools_settings(
+                    query, f"watermark_config {page_no}"
+                )
+            except ValueError as e:
+                LOGGER.error(
+                    f"Invalid page number: {data[3]}, using global watermark_config_page: {watermark_config_page}. Error: {e}"
+                )
+                # If page number is not a valid integer, use the global variable
+                await update_media_tools_settings(
+                    query, f"watermark_config {watermark_config_page}"
+                )
+        else:
+            # No page number provided, use the global variable
+            await update_media_tools_settings(
+                query, f"watermark_config {watermark_config_page}"
+            )
     elif data[2] == "merge_config" or (len(data) > 3 and data[2] == "merge_config"):
         await query.answer()
         # Declare global variable first
@@ -6580,10 +6600,37 @@ async def edit_media_tools_settings(client, query):
     elif data[2] == "set":
         await query.answer()
         buttons = ButtonMaker()
-        text = media_tools_text.get(
+
+        # Get help text from media_tools_text dictionary
+        from bot.helper.ext_utils.help_messages import media_tools_text
+
+        # Format the help text with examples and blockquote
+        help_text = media_tools_text.get(
             data[3], f"Send a value for {data[3]}. Timeout: 60 sec"
         )
-        buttons.data_button("Back", f"mediatools {user_id} menu {data[3]}", "footer")
+
+        # Format the help text with blockquote
+        formatted_help_text = f"<blockquote>{help_text}</blockquote>\n\nSend a value for {data[3]}. Timeout: 60 sec"
+
+        # Add back button that returns to the correct menu
+        if data[3].startswith(
+            ("WATERMARK_", "AUDIO_WATERMARK_", "SUBTITLE_WATERMARK_")
+        ):
+            # For watermark text settings, get the current page
+            page_no = watermark_config_page
+            # Store the page number in handler_dict for this user
+            handler_dict[f"{user_id}_watermark_page"] = page_no
+            # Add back button that returns to the correct menu with page number
+            buttons.data_button(
+                "Back",
+                f"mediatools {user_id} back_to_watermark_config {page_no}",
+                "footer",
+            )
+        else:
+            # For other settings, go back to the specific menu
+            buttons.data_button(
+                "Back", f"mediatools {user_id} menu {data[3]}", "footer"
+            )
 
         # Check if we're in a task context (using -mt flag)
         is_task_context = False
@@ -6607,7 +6654,7 @@ async def edit_media_tools_settings(client, query):
             # In normal context, add Close button
             buttons.data_button("Close", f"mediatools {user_id} close", "footer")
 
-        await edit_message(message, text, buttons.build_menu(1))
+        await edit_message(message, formatted_help_text, buttons.build_menu(1))
 
         # Set up function to handle user input
         rfunc = partial(get_menu, data[3], message, user_id)

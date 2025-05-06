@@ -377,7 +377,7 @@ async def get_buttons(key=None, edit_type=None, page=0, user_id=None):
             if key.startswith(
                 ("WATERMARK_", "AUDIO_WATERMARK_", "SUBTITLE_WATERMARK_")
             ):
-                # Check if we're in the watermark text menu
+                # Check if we're in the watermark text menu with pagination
                 if globals().get("watermark_text_page", 0) > 0 and key in [
                     "WATERMARK_POSITION",
                     "WATERMARK_SIZE",
@@ -394,7 +394,7 @@ async def get_buttons(key=None, edit_type=None, page=0, user_id=None):
                     # If we're in the watermark text menu, include the current page in the back button
                     current_page = globals().get("watermark_text_page", 0)
                     buttons.data_button(
-                        "Back", f"botset back_to_watermark_text {current_page}"
+                        "Back", f"botset back_to_watermark_text_page {current_page}"
                     )
                 else:
                     buttons.data_button("Back", "botset mediatools_watermark")
@@ -497,12 +497,29 @@ async def get_buttons(key=None, edit_type=None, page=0, user_id=None):
                 help_text = "Send your text which will be used for audio watermarks. If empty, the visual watermark text will be used."
             elif key == "SUBTITLE_WATERMARK_TEXT":
                 help_text = "Send your text which will be used for subtitle watermarks. If empty, the visual watermark text will be used."
-            elif key == "SUBTITLE_WATERMARK_INTERVAL":
-                help_text = "Send interval in seconds for subtitle watermarks. This will add timestamps to watermarks. Set to 0 to disable."
             elif key == "WATERMARK_POSITION":
-                help_text = "Send watermark position. Valid options: top_left, top_right, bottom_left, bottom_right, center."
+                help_text = "Send watermark position. Valid options: top_left, top_right, bottom_left, bottom_right, center.\n\nExample: top_right"
+            elif key == "WATERMARK_SIZE":
+                help_text = "Send watermark size as an integer. This controls the font size for text watermarks.\n\nExample: 24"
+            elif key == "WATERMARK_COLOR":
+                help_text = "Send watermark color. Can be a color name or hex code.\n\nExamples: white, black, red, #FF0000, #00FF00"
+            elif key == "WATERMARK_FONT":
+                help_text = "Send font name for text watermark. The font file should exist in the bot's fonts directory.\n\nExample: default.otf"
+            elif key == "WATERMARK_OPACITY":
+                help_text = "Send opacity value between 0.0 (transparent) and 1.0 (opaque).\n\nExample: 0.7"
+            elif key == "WATERMARK_QUALITY":
+                help_text = "Send quality setting for watermark. Higher values mean better quality but larger file size.\n\nExample: high, medium, low"
+            elif key == "WATERMARK_SPEED":
+                help_text = "Send speed setting for watermark processing. Faster speeds may reduce quality.\n\nExample: fast, medium, slow"
+            elif key == "AUDIO_WATERMARK_VOLUME":
+                help_text = "Send volume level for audio watermarks as a float between 0.0 and 1.0.\n\nExample: 0.3"
+            elif key == "AUDIO_WATERMARK_INTERVAL":
+                help_text = "Send interval in seconds between audio watermarks. Set to 0 to disable interval.\n\nExample: 30"
+            elif key == "SUBTITLE_WATERMARK_STYLE":
+                help_text = "Send style for subtitle watermarks. This affects how the text appears.\n\nExample: bold, italic, underline"
+            elif key == "SUBTITLE_WATERMARK_INTERVAL":
+                help_text = "Send interval in seconds between subtitle watermarks. Set to 0 to disable interval.\n\nExample: 60"
             elif key in {
-                "WATERMARK_SIZE",
                 "WATERMARK_THREAD_NUMBER",
                 "MERGE_THREAD_NUMBER",
                 "MERGE_PRIORITY",
@@ -1514,12 +1531,11 @@ Configure task monitoring settings to automatically manage downloads based on pe
                 "View", "botset view mediatools_watermark_text", "footer"
             )
 
-        # Default button removed as requested
+        # Add Default button after View/Edit button
+        buttons.data_button("Default", "botset default_watermark_text", "footer")
 
-        # Add navigation buttons with current page in the callback data
-        buttons.data_button(
-            "Back", f"botset back_to_watermark_text {watermark_text_page}", "footer"
-        )
+        # Add navigation buttons - always go back to watermark menu
+        buttons.data_button("Back", "botset mediatools_watermark", "footer")
         buttons.data_button("Close", "botset close", "footer")
 
         # Add pagination buttons in a separate row below action buttons
@@ -4573,6 +4589,16 @@ async def edit_bot_settings(client, query):
         # Get the current state before making changes
         current_state = globals()["state"]
 
+        # Always go back to the watermark menu
+        globals()["state"] = current_state
+        await update_buttons(message, "mediatools_watermark")
+        return
+
+    elif data[1] == "back_to_watermark_text_page":
+        await query.answer()
+        # Get the current state before making changes
+        current_state = globals()["state"]
+
         try:
             # Check if we have a page number in the callback data
             if len(data) > 2:
@@ -4600,11 +4626,66 @@ async def edit_bot_settings(client, query):
             )
             return
         except Exception as e:
-            LOGGER.error(f"Error in back_to_watermark_text: {e}")
+            LOGGER.error(f"Error in back_to_watermark_text_page: {e}")
             # If there's an error, just go back to the watermark menu
             globals()["state"] = current_state
             await update_buttons(message, "mediatools_watermark")
             return
+
+    elif data[1] == "default_watermark_text":
+        await query.answer("Resetting all watermark text settings to default...")
+        # Reset all watermark text settings to default
+
+        # Visual settings
+        Config.WATERMARK_POSITION = DEFAULT_VALUES["WATERMARK_POSITION"]
+        Config.WATERMARK_SIZE = DEFAULT_VALUES["WATERMARK_SIZE"]
+        Config.WATERMARK_COLOR = DEFAULT_VALUES["WATERMARK_COLOR"]
+        Config.WATERMARK_FONT = DEFAULT_VALUES["WATERMARK_FONT"]
+        Config.WATERMARK_OPACITY = DEFAULT_VALUES["WATERMARK_OPACITY"]
+
+        # Performance settings
+        Config.WATERMARK_QUALITY = DEFAULT_VALUES["WATERMARK_QUALITY"]
+        Config.WATERMARK_SPEED = DEFAULT_VALUES["WATERMARK_SPEED"]
+
+        # Audio watermark settings
+        Config.AUDIO_WATERMARK_VOLUME = DEFAULT_VALUES["AUDIO_WATERMARK_VOLUME"]
+        Config.AUDIO_WATERMARK_INTERVAL = DEFAULT_VALUES["AUDIO_WATERMARK_INTERVAL"]
+
+        # Subtitle watermark settings
+        Config.SUBTITLE_WATERMARK_STYLE = DEFAULT_VALUES["SUBTITLE_WATERMARK_STYLE"]
+        Config.SUBTITLE_WATERMARK_INTERVAL = DEFAULT_VALUES[
+            "SUBTITLE_WATERMARK_INTERVAL"
+        ]
+
+        # Update the database
+        await database.update_config(
+            {
+                "WATERMARK_POSITION": DEFAULT_VALUES["WATERMARK_POSITION"],
+                "WATERMARK_SIZE": DEFAULT_VALUES["WATERMARK_SIZE"],
+                "WATERMARK_COLOR": DEFAULT_VALUES["WATERMARK_COLOR"],
+                "WATERMARK_FONT": DEFAULT_VALUES["WATERMARK_FONT"],
+                "WATERMARK_OPACITY": DEFAULT_VALUES["WATERMARK_OPACITY"],
+                "WATERMARK_QUALITY": DEFAULT_VALUES["WATERMARK_QUALITY"],
+                "WATERMARK_SPEED": DEFAULT_VALUES["WATERMARK_SPEED"],
+                "AUDIO_WATERMARK_VOLUME": DEFAULT_VALUES["AUDIO_WATERMARK_VOLUME"],
+                "AUDIO_WATERMARK_INTERVAL": DEFAULT_VALUES[
+                    "AUDIO_WATERMARK_INTERVAL"
+                ],
+                "SUBTITLE_WATERMARK_STYLE": DEFAULT_VALUES[
+                    "SUBTITLE_WATERMARK_STYLE"
+                ],
+                "SUBTITLE_WATERMARK_INTERVAL": DEFAULT_VALUES[
+                    "SUBTITLE_WATERMARK_INTERVAL"
+                ],
+            }
+        )
+
+        # Get the current state before updating the UI
+        current_state = globals()["state"]
+        # Set the state back to what it was
+        globals()["state"] = current_state
+        # Go back to the watermark menu instead of the text menu
+        await update_buttons(message, "mediatools_watermark")
 
     # Default watermark text handler removed as requested
 
