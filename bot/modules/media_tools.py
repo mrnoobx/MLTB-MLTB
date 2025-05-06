@@ -578,7 +578,7 @@ async def get_media_tools_settings(from_user, stype="main", page_no=0):
         # Add action buttons in a separate row
         buttons.data_button(
             "Back",
-            f"mediatools {user_id} back",
+            f"mediatools {user_id} watermark",
             "footer",
         )
         buttons.data_button("Close", f"mediatools {user_id} close", "footer")

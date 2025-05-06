@@ -1,6 +1,10 @@
 from asyncio import sleep
 from secrets import token_hex
 import re
+import warnings
+
+# Suppress SyntaxWarnings for escape sequences in regex patterns
+warnings.filterwarnings("ignore", category=SyntaxWarning, module=__name__)
 
 from telegraph.aio import Telegraph
 from telegraph.exceptions import RetryAfterError, TelegraphException
@@ -74,33 +78,46 @@ class TelegraphHelper:
                 # Replace opening tags
                 if tag.lower() in ["div", "span"]:
                     # Replace div and span with p
+                    # Use string concatenation instead of f-strings for regex patterns
                     content = re.sub(
-                        f"<\s*{tag}([^>]*)>", "<p\\1>", content, flags=re.IGNORECASE
-                    )
-                    content = re.sub(
-                        f"<\s*/\s*{tag}\s*>", "</p>", content, flags=re.IGNORECASE
-                    )
-                elif tag.lower() in ["h1", "h2", "h5", "h6"]:
-                    # Replace other heading levels with h4
-                    content = re.sub(
-                        f"<\s*{tag}([^>]*)>",
-                        "<h4\\1>",
+                        r"<\s*" + re.escape(tag) + r"([^>]*)>",
+                        r"<p\1>",
                         content,
                         flags=re.IGNORECASE,
                     )
                     content = re.sub(
-                        f"<\s*/\s*{tag}\s*>",
-                        "</h4>",
+                        r"<\s*/\s*" + re.escape(tag) + r"\s*>",
+                        r"</p>",
+                        content,
+                        flags=re.IGNORECASE,
+                    )
+                elif tag.lower() in ["h1", "h2", "h5", "h6"]:
+                    # Replace other heading levels with h4
+                    content = re.sub(
+                        r"<\s*" + re.escape(tag) + r"([^>]*)>",
+                        r"<h4\1>",
+                        content,
+                        flags=re.IGNORECASE,
+                    )
+                    content = re.sub(
+                        r"<\s*/\s*" + re.escape(tag) + r"\s*>",
+                        r"</h4>",
                         content,
                         flags=re.IGNORECASE,
                     )
                 else:
                     # Remove other unsupported tags but keep their content
                     content = re.sub(
-                        f"<\s*{tag}[^>]*>", "", content, flags=re.IGNORECASE
+                        r"<\s*" + re.escape(tag) + r"[^>]*>",
+                        "",
+                        content,
+                        flags=re.IGNORECASE,
                     )
                     content = re.sub(
-                        f"<\s*/\s*{tag}\s*>", "", content, flags=re.IGNORECASE
+                        r"<\s*/\s*" + re.escape(tag) + r"\s*>",
+                        "",
+                        content,
+                        flags=re.IGNORECASE,
                     )
 
         return content
