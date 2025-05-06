@@ -725,10 +725,6 @@ async def get_media_tools_settings(from_user, stype="main", page_no=0):
         else:
             remove_original_status = "❌ Disabled"
 
-        # Audio and subtitle watermarks will use the same text as visual watermark
-        audio_watermark_text = "Same as visual watermark"
-        subtitle_watermark_text = "Same as visual watermark"
-
         # Get quality and speed values if they exist
         user_has_quality = (
             "WATERMARK_QUALITY" in user_dict and user_dict["WATERMARK_QUALITY"]
@@ -1040,11 +1036,11 @@ async def get_media_tools_settings(from_user, stype="main", page_no=0):
         # Ensure page_no is valid
         if page_no >= total_pages:
             page_no = 0
-            merge_config_page = 0  # Update global variableelif page_no < 0:
+            merge_config_page = 0  # Update global variable
+        elif page_no < 0:
             page_no = total_pages - 1
-            merge_config_page = (
-                total_pages - 1
-            )  # Update global variable# Get settings for current page
+            merge_config_page = total_pages - 1  # Update global variable
+            # Get settings for current page
         current_page_settings = merge_settings[
             page_no * items_per_page : (page_no * items_per_page) + items_per_page
         ]
@@ -6203,7 +6199,6 @@ async def set_option(_, message, option, rfunc):
         stored_page = handler_dict.get(f"{user_id}_watermark_page")
         if stored_page is not None:
             # Update the global watermark_config_page variable
-            global watermark_config_page
             watermark_config_page = stored_page
             # Return to the watermark config menu with the correct page
             await update_media_tools_settings(
@@ -6231,7 +6226,6 @@ async def set_option(_, message, option, rfunc):
             )
             page_no = int(page_info) - 1
             # Update the global merge_config_page variable
-            global merge_config_page
             merge_config_page = (
                 page_no  # Create a new rfunc that will return to the correct page
             )
@@ -6460,8 +6454,6 @@ async def edit_media_tools_settings(client, query):
         len(data) > 3 and data[2] == "watermark_config"
     ):
         await query.answer()
-        # Declare global variable first
-        global watermark_config_page
         if len(data) > 3:
             # Page number is provided
             try:
@@ -6487,8 +6479,6 @@ async def edit_media_tools_settings(client, query):
             )
     elif data[2] == "merge_config" or (len(data) > 3 and data[2] == "merge_config"):
         await query.answer()
-        # Declare global variable first
-        global merge_config_page
         if len(data) > 3:
             # Page number is provided
             try:
