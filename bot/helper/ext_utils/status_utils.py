@@ -12,17 +12,17 @@ SIZE_UNITS = ["B", "KB", "MB", "GB", "TB", "PB"]
 
 
 class MirrorStatus:
-    STATUS_UPLOAD = "Upload"
-    STATUS_DOWNLOAD = "Download"
+    STATUS_UPLOAD = "Upload 📤"
+    STATUS_DOWNLOAD = "Download 📂"
     STATUS_CLONE = "Clone"
-    STATUS_QUEUEDL = "QueueDl"
-    STATUS_QUEUEUP = "QueueUp"
+    STATUS_QUEUEDL = "QueueDl ⏳"
+    STATUS_QUEUEUP = "QueueUp ⏳"
     STATUS_PAUSED = "Pause"
     STATUS_ARCHIVE = "Archive"
-    STATUS_EXTRACT = "Extract"
-    STATUS_SPLIT = "Split"
-    STATUS_CHECK = "CheckUp"
-    STATUS_SEED = "Seed"
+    STATUS_EXTRACT = "Extract 📂"
+    STATUS_SPLIT = "Split ✂️"
+    STATUS_CHECK = "CheckUp ⏳"
+    STATUS_SEED = "Seed 🌧"
     STATUS_SAMVID = "SamVid"
     STATUS_CONVERT = "Convert"
     STATUS_FFMPEG = "FFmpeg"
@@ -251,10 +251,10 @@ async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=
             msg += f" | <b>⏳ Time: </b>{task.seeding_time()}"
         else:
             msg += f"\n<b>💽 Size: </b>{task.size()}"
-        msg += f"\n<b>Tool:</b> {task.tool}"
+        msg += f"\n<b>💯 Tool:</b> {task.tool}"
         task_gid = task.gid()
         short_gid = task_gid[-8:] if task_gid.startswith("SABnzbd") else task_gid[:8]
-        msg += f"\n/stop_{short_gid}\n\n"
+        msg += f"\n<b> ❌⚠️: /stop_{download.gid()[:8]}</b>\n\n"
 
     if len(msg) == 0:
         if status == "All":
