@@ -785,20 +785,24 @@ class YtDlp(TaskListener):
             if args["-ff"]:
                 if isinstance(args["-ff"], str):
                     # Check if it's a key in the FFmpeg commands dictionary
-                    if (
-                        Config.FFMPEG_CMDS and args["-ff"] in Config.FFMPEG_CMDS
-                    ) or (
+                    if Config.FFMPEG_CMDS and args["-ff"] in Config.FFMPEG_CMDS:
+                        self.ffmpeg_cmds = Config.FFMPEG_CMDS[args["-ff"]]
+                        LOGGER.info(
+                            f"Using FFmpeg command key from owner config: {self.ffmpeg_cmds}"
+                        )
+                    elif (
                         self.user_dict.get("FFMPEG_CMDS")
                         and args["-ff"] in self.user_dict["FFMPEG_CMDS"]
                     ):
-                        # If it's a key in the config, use it as a set
-                        self.ffmpeg_cmds = {args["-ff"]}
+                        self.ffmpeg_cmds = self.user_dict["FFMPEG_CMDS"][args["-ff"]]
                         LOGGER.info(
-                            f"Using FFmpeg command key from config: {self.ffmpeg_cmds}"
+                            f"Using FFmpeg command key from user config: {self.ffmpeg_cmds}"
                         )
                     else:
                         # If it's not a key, treat it as a direct command
-                        self.ffmpeg_cmds = [args["-ff"]]
+                        import shlex
+
+                        self.ffmpeg_cmds = shlex.split(args["-ff"])
                         LOGGER.info(
                             f"Using direct FFmpeg command: {self.ffmpeg_cmds}"
                         )

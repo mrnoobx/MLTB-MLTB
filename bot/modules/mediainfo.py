@@ -989,15 +989,17 @@ async def gen_mediainfo(
 
         elif media:
             # Ensure media.file_name is not None
-            if not hasattr(media, 'file_name') or media.file_name is None:
+            if not hasattr(media, "file_name") or media.file_name is None:
                 # Generate a default filename if none exists
                 file_name = f"mediainfo_{int(time())}"
-                LOGGER.warning(f"Media has no filename, using generated name: {file_name}")
+                LOGGER.warning(
+                    f"Media has no filename, using generated name: {file_name}"
+                )
             else:
                 file_name = media.file_name
 
             des_path = ospath.join(path, file_name)
-            file_size = getattr(media, 'file_size', 0)
+            file_size = getattr(media, "file_size", 0)
 
             # Update status message if not in silent mode
             if not silent and temp_send:
@@ -1011,7 +1013,11 @@ async def gen_mediainfo(
                 if reply and des_path:
                     try:
                         # Ensure we have a valid path
-                        download_path = ospath.join(getcwd(), des_path) if isinstance(des_path, str) else des_path
+                        download_path = (
+                            ospath.join(getcwd(), des_path)
+                            if isinstance(des_path, str)
+                            else des_path
+                        )
                         await reply.download(download_path)
                     except Exception as e:
                         LOGGER.error(f"Error downloading file: {e}")
@@ -1025,7 +1031,9 @@ async def gen_mediainfo(
                 # For large files, download only a portion
                 downloaded_size = 0
                 max_sample_size = 10 * 1024 * 1024  # 10MB
-                min_sample_size = 1 * 1024 * 1024   # 1MB (minimum required for analysis)
+                min_sample_size = (
+                    1 * 1024 * 1024
+                )  # 1MB (minimum required for analysis)
 
                 try:
                     async with aiopen(des_path, "wb") as f:
@@ -1090,7 +1098,11 @@ async def gen_mediainfo(
                     smart_garbage_collection(aggressive=False)
 
         # Check if file exists and is accessible
-        if not des_path or not isinstance(des_path, (str, bytes)) or not await aiopath.exists(des_path):
+        if (
+            not des_path
+            or not isinstance(des_path, (str, bytes))
+            or not await aiopath.exists(des_path)
+        ):
             error_msg = f"MediaInfo: File not found or invalid path: {des_path}"
             LOGGER.error(error_msg)
             if not silent:
@@ -1127,7 +1139,9 @@ async def gen_mediainfo(
                 # Default values if des_path is not a string
                 file_ext = ""
                 filename = f"mediainfo_{int(time())}"
-                LOGGER.warning(f"Invalid des_path type: {type(des_path)}, using default filename")
+                LOGGER.warning(
+                    f"Invalid des_path type: {type(des_path)}, using default filename"
+                )
         except Exception as e:
             LOGGER.error(f"Error extracting file extension: {e}")
             file_ext = ""
@@ -1255,7 +1269,9 @@ async def gen_mediainfo(
         try:
             # Verify file exists before running file command
             if not isinstance(des_path, str):
-                LOGGER.warning(f"Cannot run file command on non-string path: {des_path}")
+                LOGGER.warning(
+                    f"Cannot run file command on non-string path: {des_path}"
+                )
             else:
                 abs_path = ospath.abspath(des_path)
                 if not ospath.exists(abs_path):
@@ -1284,7 +1300,9 @@ async def gen_mediainfo(
                         ):
                             is_archive = True  # Try to determine the specific archive format from file output
                             if "rar archive" in stdout_lower:
-                                file_ext = ".rar"  # Override extension for correct handling
+                                file_ext = (
+                                    ".rar"  # Override extension for correct handling
+                                )
                             elif "zip archive" in stdout_lower:
                                 file_ext = ".zip"
                             elif "7-zip archive" in stdout_lower:
@@ -2201,7 +2219,9 @@ async def gen_mediainfo(
                 LOGGER.error(f"Fallback file analysis failed: {e}")
 
             # If all fallbacks fail, raise the original exception
-            raise Exception(f"ffprobe failed with return code {return_code}: {stderr}")
+            raise Exception(
+                f"ffprobe failed with return code {return_code}: {stderr}"
+            )
 
         if stdout:
             try:
@@ -2221,9 +2241,16 @@ async def gen_mediainfo(
     finally:
         # Clean up temporary file ONLY if it's not the original file path
         # This ensures we don't delete files that are still needed for upload
-        if des_path and isinstance(des_path, (str, bytes)) and await aiopath.exists(des_path) and des_path != media_path:
+        if (
+            des_path
+            and isinstance(des_path, (str, bytes))
+            and await aiopath.exists(des_path)
+            and des_path != media_path
+        ):
             # Only delete files in the Mediainfo/ directory (temporary downloads)
-            if isinstance(des_path, str) and (des_path.startswith("Mediainfo/") or "Mediainfo/" in des_path):
+            if isinstance(des_path, str) and (
+                des_path.startswith("Mediainfo/") or "Mediainfo/" in des_path
+            ):
                 await aioremove(des_path)
             else:
                 pass
@@ -2304,6 +2331,76 @@ async def gen_mediainfo(
                             await edit_message(
                                 temp_send,
                                 "Failed to create MediaInfo page: Content too large for Telegraph",
+                            )
+                        return None
+                # Handle the specific 'untitled' tag error
+                elif "'untitled' tag is not allowed" in str(e):
+                    LOGGER.warning(
+                        "Encountered 'untitled' tag error, trying fallback approach"
+                    )
+
+                    # Create a very basic version with minimal HTML
+                    try:
+                        # Extract just the basic information
+                        basic_info = ""
+
+                        # Try to extract filename from the content
+                        filename = "Unknown"
+                        if "<h4>" in tc and "</h4>" in tc:
+                            filename_match = re_search(r"<h4>(.*?)</h4>", tc)
+                            if filename_match:
+                                filename = filename_match.group(1)
+
+                        # Check if this is a YouTube video (common source of this error)
+                        is_youtube = (
+                            "youtube" in filename.lower()
+                            or "youtube" in des_path.lower()
+                        )
+
+                        # Create a very simple content with minimal HTML
+                        basic_info = f"<h4>{filename}</h4><br><br>"
+                        basic_info += (
+                            "<blockquote>Basic Information</blockquote><pre>"
+                        )
+
+                        # Extract file size if available
+                        if file_size > 0:
+                            size_mb = file_size / (1024 * 1024)
+                            basic_info += f"File size: {size_mb:.2f} MiB\n"
+
+                        # Add a note about the error
+                        if is_youtube:
+                            basic_info += "\nThis is a YouTube video. Full MediaInfo could not be generated due to format limitations.\n"
+                        else:
+                            basic_info += "\nFull MediaInfo could not be generated due to format limitations.\n"
+
+                        basic_info += "</pre><br>"
+
+                        # Try to create a page with this minimal content
+                        link_id = (
+                            await telegraph.create_page(
+                                title="Basic MediaInfo", content=basic_info
+                            )
+                        )["path"]
+
+                        # If in silent mode, just return the path
+                        if silent:
+                            return link_id
+
+                        # Otherwise, send a message with the link
+                        tag = message.from_user.mention
+
+                        # Final message with link
+                        await temp_send.edit(
+                            f"<blockquote>{tag}, Basic MediaInfo generated <a href='https://graph.org/{link_id}'>here</a>. Full details unavailable due to format limitations.</blockquote>",
+                            disable_web_page_preview=False,
+                        )
+                    except Exception as e2:
+                        LOGGER.error(f"Failed to create basic MediaInfo page: {e2}")
+                        if not silent and temp_send:
+                            await edit_message(
+                                temp_send,
+                                "Failed to create MediaInfo page: Unable to process this media format",
                             )
                         return None
                 else:

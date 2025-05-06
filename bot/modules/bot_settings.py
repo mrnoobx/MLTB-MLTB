@@ -377,8 +377,8 @@ async def get_buttons(key=None, edit_type=None, page=0, user_id=None):
             if key.startswith(
                 ("WATERMARK_", "AUDIO_WATERMARK_", "SUBTITLE_WATERMARK_")
             ):
-                # Check if we're in the watermark text menu with pagination
-                if globals().get("watermark_text_page", 0) > 0 and key in [
+                # Check if we're in the watermark text menu
+                if key in [
                     "WATERMARK_POSITION",
                     "WATERMARK_SIZE",
                     "WATERMARK_COLOR",
@@ -390,6 +390,9 @@ async def get_buttons(key=None, edit_type=None, page=0, user_id=None):
                     "AUDIO_WATERMARK_INTERVAL",
                     "SUBTITLE_WATERMARK_STYLE",
                     "SUBTITLE_WATERMARK_INTERVAL",
+                    "WATERMARK_KEY",
+                    "AUDIO_WATERMARK_TEXT",
+                    "SUBTITLE_WATERMARK_TEXT",
                 ]:
                     # If we're in the watermark text menu, include the current page in the back button
                     current_page = globals().get("watermark_text_page", 0)

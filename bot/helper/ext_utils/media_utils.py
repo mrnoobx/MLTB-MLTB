@@ -3,6 +3,7 @@ import gc
 import json
 import os
 import resource
+import shlex
 import shutil
 from asyncio import create_subprocess_exec, gather, sleep, subprocess, wait_for
 from asyncio.subprocess import PIPE
@@ -3925,6 +3926,27 @@ class FFMpeg:
         base_name, ext = ospath.splitext(f_path)
         dir, base_name = base_name.rsplit("/", 1)
 
+        # Process FFmpeg command if it's a string or a list containing a string
+        if (
+            ffmpeg
+            and isinstance(ffmpeg, list)
+            and len(ffmpeg) > 0
+            and isinstance(ffmpeg[0], str)
+            and ffmpeg[0].startswith("[")
+            and ffmpeg[0].endswith("]")
+        ):
+            # This is a string representation of a list, likely from config
+            try:
+                # Remove the outer brackets and parse the inner string
+                cmd_str = ffmpeg[0][1:-1].strip("\"'")
+                # Use shlex to properly split the command respecting quotes
+                import shlex
+
+                ffmpeg = shlex.split(cmd_str)
+                LOGGER.info(f"Parsed FFmpeg command from string: {ffmpeg}")
+            except Exception as e:
+                LOGGER.error(f"Error parsing FFmpeg command string: {e}")
+
         # Check for -del flag to delete original files after processing
         delete_files = False
         if "-del" in ffmpeg:
@@ -7306,7 +7328,7 @@ async def merge_images(
     # Handle "none" output format by using the format of the first input file
     if output_format == "none" and files:
         # Extract extension from the first file
-        first_file_ext = os.path.splitext(files[0])[1].lower().lstrip('.')
+        first_file_ext = os.path.splitext(files[0])[1].lower().lstrip(".")
         if first_file_ext in ["jpg", "jpeg", "png", "gif", "webp", "bmp"]:
             # Use the extension if it's a valid image format
             if first_file_ext == "jpeg":
@@ -7642,7 +7664,9 @@ async def merge_images(
                 mask = Image.eval(
                     merged_image.split()[3], lambda a: 255 if a <= 128 else 0
                 )
-                save_kwargs.update({"transparency": 255, "optimize": True, "mask": mask})
+                save_kwargs.update(
+                    {"transparency": 255, "optimize": True, "mask": mask}
+                )
                 merged_image.save(output_file, **save_kwargs)
             else:
                 merged_image.save(output_file, **save_kwargs)

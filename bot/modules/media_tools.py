@@ -5279,8 +5279,31 @@ async def get_menu(option, message, user_id):
         or option.startswith("AUDIO_WATERMARK_")
         or option.startswith("SUBTITLE_WATERMARK_")
     ):
-        # For watermark settings, always go back to the watermark menu
-        back_target = "watermark"
+        # For watermark text settings, check if we need to return to a specific page
+        global watermark_config_page
+
+        # Check if we have a stored page number for this user
+        stored_page = handler_dict.get(f"{user_id}_watermark_page")
+        if stored_page is not None:
+            # Use the stored page number
+            back_target = f"back_to_watermark_config {stored_page}"
+        else:
+            # If no stored page, check if the message text contains page info
+            if message.text and "Page:" in message.text:
+                try:
+                    page_info = message.text.split("Page:")[1].strip().split("/")[0]
+                    page_no = int(page_info) - 1
+                    # Update the global variable
+                    watermark_config_page = page_no
+                    back_target = f"back_to_watermark_config {page_no}"
+                except (ValueError, IndexError) as e:
+                    LOGGER.error(
+                        f"Failed to extract page number from message text: {e}, using global watermark_config_page: {watermark_config_page}"
+                    )
+                    back_target = f"back_to_watermark_config {watermark_config_page}"
+            else:
+                # Use the global variable
+                back_target = f"back_to_watermark_config {watermark_config_page}"
     elif option.startswith("CONVERT_VIDEO_"):
         back_target = "convert_video"
     elif option.startswith("CONVERT_AUDIO_"):
@@ -6199,11 +6222,37 @@ async def set_option(_, message, option, rfunc):
         stored_page = handler_dict.get(f"{user_id}_watermark_page")
         if stored_page is not None:
             # Update the global watermark_config_page variable
+            global watermark_config_page
             watermark_config_page = stored_page
             # Return to the watermark config menu with the correct page
             await update_media_tools_settings(
                 message, f"watermark_config {stored_page}"
             )
+        # If message has page info in text, extract it
+        elif (
+            hasattr(message, "reply_to_message")
+            and message.reply_to_message
+            and message.reply_to_message.text
+            and "Page:" in message.reply_to_message.text
+        ):
+            try:
+                page_info = (
+                    message.reply_to_message.text.split("Page:")[1]
+                    .strip()
+                    .split("/")[0]
+                )
+                page_no = int(page_info) - 1
+                # Update the global variable
+                watermark_config_page = page_no
+                await update_media_tools_settings(
+                    message, f"watermark_config {page_no}"
+                )
+            except (ValueError, IndexError) as e:
+                LOGGER.error(f"Failed to extract page number from message text: {e}")
+                # If no stored page, use the global variable
+                await update_media_tools_settings(
+                    message, f"watermark_config {watermark_config_page}"
+                )
         else:
             # If no stored page, use the global variable
             await update_media_tools_settings(
@@ -6226,6 +6275,7 @@ async def set_option(_, message, option, rfunc):
             )
             page_no = int(page_info) - 1
             # Update the global merge_config_page variable
+            global merge_config_page
             merge_config_page = page_no  # Create a new rfunc that will return to the correct page
             await update_media_tools_settings(message, f"merge_config {page_no}")
         except (ValueError, IndexError) as e:
@@ -6313,9 +6363,6 @@ async def media_tools_settings(_, message):
             if db_config and "MEDIA_TOOLS_ENABLED" in db_config:
                 # Update Config with the latest value from database
                 Config.MEDIA_TOOLS_ENABLED = db_config["MEDIA_TOOLS_ENABLED"]
-                LOGGER.info(
-                    f"Refreshed MEDIA_TOOLS_ENABLED from database: {Config.MEDIA_TOOLS_ENABLED}"
-                )
     except Exception as e:
         LOGGER.error(f"Error refreshing MEDIA_TOOLS_ENABLED from database: {e}")
 
