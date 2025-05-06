@@ -171,7 +171,7 @@ def get_progress_bar_string(pct):
     if isinstance(pct, str):
         pct = float(pct.strip("%"))
     p = min(max(pct, 0), 100)
-    c_full = int((p + 5) // 10)
+    int((p + 5) // 10)
     p_str = "★" * cFull
     p_str += "✩" * (10 - cFull)
     return f"{p_str}"
