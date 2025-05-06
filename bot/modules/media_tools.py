@@ -6276,7 +6276,9 @@ async def set_option(_, message, option, rfunc):
             page_no = int(page_info) - 1
             # Update the global merge_config_page variable
             global merge_config_page
-            merge_config_page = page_no  # Create a new rfunc that will return to the correct page
+            merge_config_page = (
+                page_no  # Create a new rfunc that will return to the correct page
+            )
             await update_media_tools_settings(message, f"merge_config {page_no}")
         except (ValueError, IndexError) as e:
             LOGGER.error(f"Failed to extract page number from message text: {e}")

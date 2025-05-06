@@ -1537,12 +1537,8 @@ Configure task monitoring settings to automatically manage downloads based on pe
         # Add Default button after View/Edit button
         buttons.data_button("Default", "botset default_watermark_text", "footer")
 
-        # Add navigation buttons - back button should include the current page
-        buttons.data_button(
-            "Back",
-            f"botset back_to_watermark_text_page {watermark_text_page}",
-            "footer",
-        )
+        # Add navigation buttons - back button should always go to the main watermark menu
+        buttons.data_button("Back", "botset mediatools_watermark", "footer")
         buttons.data_button("Close", "botset close", "footer")
 
         # Add pagination buttons in a separate row below action buttons

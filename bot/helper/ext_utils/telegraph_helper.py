@@ -83,10 +83,16 @@ class TelegraphHelper:
                 elif tag.lower() in ["h1", "h2", "h5", "h6"]:
                     # Replace other heading levels with h4
                     content = re.sub(
-                        f"<\s*{tag}([^>]*)>", "<h4\\1>", content, flags=re.IGNORECASE
+                        f"<\s*{tag}([^>]*)>",
+                        "<h4\\1>",
+                        content,
+                        flags=re.IGNORECASE,
                     )
                     content = re.sub(
-                        f"<\s*/\s*{tag}\s*>", "</h4>", content, flags=re.IGNORECASE
+                        f"<\s*/\s*{tag}\s*>",
+                        "</h4>",
+                        content,
+                        flags=re.IGNORECASE,
                     )
                 else:
                     # Remove other unsupported tags but keep their content
@@ -140,11 +146,25 @@ class TelegraphHelper:
                 )
 
                 # More aggressive sanitization - strip all tags except the most basic ones
-                basic_content = re.sub(
-                    r"<(?!/?(?:b|i|strong|pre|blockquote|br|a)[^>]*>).*?>",
-                    "",
-                    sanitized_content,
+                # Create a very simple version with only basic tags
+                basic_content = "<h4>Media Information</h4><br><br>"
+
+                # Extract any text between <pre> tags if possible
+                pre_content = re.findall(
+                    r"<pre>(.*?)</pre>", sanitized_content, re.DOTALL
                 )
+                if pre_content:
+                    for content_block in pre_content:
+                        # Clean the content of any HTML tags
+                        clean_text = re.sub(r"<[^>]*>", "", content_block)
+                        basic_content += f"<pre>{clean_text}</pre><br>"
+                else:
+                    # If no pre tags, just extract some plain text
+                    clean_text = re.sub(r"<[^>]*>", "", sanitized_content)
+                    # Limit to first 1000 characters
+                    if len(clean_text) > 1000:
+                        clean_text = clean_text[:1000] + "..."
+                    basic_content += f"<pre>{clean_text}</pre><br>"
 
                 # Try again with the more aggressively sanitized content
                 return await self._telegraph.create_page(
