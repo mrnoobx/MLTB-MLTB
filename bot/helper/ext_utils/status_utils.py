@@ -232,25 +232,25 @@ async def get_readable_message(sid, is_user, page_no=1, status="All", page_step=
             else:
                 subsize = ""
                 count = ""
-            msg += f"\n<b>Processed:</b> {task.processed_bytes()}{subsize}"
+            msg += f"\n<b>💯 Done:</b> {task.processed_bytes()}{subsize}"
             if count:
                 msg += f"\n<b>Count:</b> {count}"
-            msg += f"\n<b>Size:</b> {task.size()}"
-            msg += f"\n<b>Speed:</b> {task.speed()}"
-            msg += f"\n<b>Estimated:</b> {task.eta()}"
+            msg += f"\n<b>💽 Size:</b> {task.size()}"
+            msg += f"\n<b>🚀 Speed:</b> {task.speed()}"
+            msg += f"\n<b>⏳ Estimated:</b> {task.eta()}"
             if (
                 tstatus == MirrorStatus.STATUS_DOWNLOAD and task.listener.is_torrent
             ) or task.listener.is_qbit:
                 with contextlib.suppress(Exception):
                     msg += f"\n<b>Seeders:</b> {task.seeders_num()} | <b>Leechers:</b> {task.leechers_num()}"
         elif tstatus == MirrorStatus.STATUS_SEED:
-            msg += f"\n<b>Size: </b>{task.size()}"
-            msg += f"\n<b>Speed: </b>{task.seed_speed()}"
-            msg += f"\n<b>Uploaded: </b>{task.uploaded_bytes()}"
-            msg += f"\n<b>Ratio: </b>{task.ratio()}"
-            msg += f" | <b>Time: </b>{task.seeding_time()}"
+            msg += f"\n<b>💽 Size: </b>{task.size()}"
+            msg += f"\n<b>🚀 Speed: </b>{task.seed_speed()}"
+            msg += f"\n<b>📈 Uploaded: </b>{task.uploaded_bytes()}"
+            msg += f"\n<b>📟 Ratio: </b>{task.ratio()}"
+            msg += f" | <b>⏳ Time: </b>{task.seeding_time()}"
         else:
-            msg += f"\n<b>Size: </b>{task.size()}"
+            msg += f"\n<b>💽 Size: </b>{task.size()}"
         msg += f"\n<b>Tool:</b> {task.tool}"
         task_gid = task.gid()
         short_gid = task_gid[-8:] if task_gid.startswith("SABnzbd") else task_gid[:8]
